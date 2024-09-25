@@ -27,7 +27,7 @@ CREATE TABLE nameBasic (
 
 CREATE TABLE titleRatings (
     tconst VARCHAR(20) PRIMARY KEY,
-    averageRating DECIMAL(2, 1),
+    averageRating DECIMAL(3, 1),
     numVotes INT,
     rottenTomatoes INT,
     metaCritic INT,
