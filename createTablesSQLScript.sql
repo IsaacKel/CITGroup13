@@ -1,4 +1,4 @@
-CREATE TABLE title_basic (
+CREATE TABLE titleBasic (
     tconst VARCHAR(20) PRIMARY KEY,
     titleType VARCHAR(50),
     primaryType VARCHAR(50),
@@ -18,14 +18,14 @@ CREATE TABLE title_basic (
     website VARCHAR(255)
 );
 
-CREATE TABLE name_basic (
+CREATE TABLE nameBasic (
     nconst VARCHAR(20) PRIMARY KEY,
     primaryName VARCHAR(255),
     birthYear INT,
     deathYear INT
 );
 
-CREATE TABLE title_ratings (
+CREATE TABLE titleRatings (
     tconst VARCHAR(20) PRIMARY KEY,
     averageRating DECIMAL(2, 1),
     numVotes INT,
@@ -34,7 +34,8 @@ CREATE TABLE title_ratings (
     FOREIGN KEY (tconst) REFERENCES title_basic(tconst) ON DELETE CASCADE
 );
 
-CREATE TABLE title_akas (
+--Potentially redundant table, can drop? 
+CREATE TABLE titleAkas (
     tconst VARCHAR(20),
     ordering INT,
     title VARCHAR(255),
@@ -47,14 +48,14 @@ CREATE TABLE title_akas (
     FOREIGN KEY (tconst) REFERENCES title_basic(tconst) ON DELETE CASCADE
 );
 
-CREATE TABLE title_language (
+CREATE TABLE titleLanguage (
     tconst VARCHAR(20),
     language VARCHAR(50),
     PRIMARY KEY (tconst, language),
     FOREIGN KEY (tconst) REFERENCES title_basic(tconst) ON DELETE CASCADE
 );
 
-CREATE TABLE title_episode (
+CREATE TABLE titleEpisode (
     tconst VARCHAR(20),
     parenttconst VARCHAR(20),
     seasonNumber INT,
@@ -63,7 +64,7 @@ CREATE TABLE title_episode (
     FOREIGN KEY (parenttconst) REFERENCES title_basic(tconst) ON DELETE CASCADE
 );
 
-CREATE TABLE title_characters (
+CREATE TABLE titleCharacters (
     nconst VARCHAR(20),
     tconst VARCHAR(20),
     character VARCHAR(255),
@@ -71,14 +72,14 @@ CREATE TABLE title_characters (
     FOREIGN KEY (tconst) REFERENCES title_basic(tconst) ON DELETE CASCADE
 );
 
-CREATE TABLE title_country (
+CREATE TABLE titleCountry (
     tconst VARCHAR(20),
     country VARCHAR(50),
     PRIMARY KEY (tconst, country),
     FOREIGN KEY (tconst) REFERENCES title_basic(tconst) ON DELETE CASCADE
 );
 
-CREATE TABLE title_genre (
+CREATE TABLE titleGenre (
     tconst VARCHAR(20),
     genre VARCHAR(50),
     PRIMARY KEY (tconst, genre),
@@ -86,27 +87,27 @@ CREATE TABLE title_genre (
 );
 
 
-
-CREATE TABLE title_principals (
+		--potentialy remove job here
+CREATE TABLE titlePrincipals (
     tconst VARCHAR(20),
     ordering INT,
     nconst VARCHAR(20),
     category VARCHAR(50),
-    job VARCHAR(50),
+    job VARCHAR(50), 
     PRIMARY KEY (tconst, ordering),
     FOREIGN KEY (tconst) REFERENCES title_basic(tconst) ON DELETE CASCADE,
     FOREIGN KEY (nconst) REFERENCES name_basic(nconst) ON DELETE CASCADE
 );
 
 
-CREATE TABLE name_knownfor (
+CREATE TABLE nameKnownfor (
     nconst VARCHAR(20),
     knownForTitles VARCHAR(255),
     PRIMARY KEY (nconst, knownForTitles),
     FOREIGN KEY (nconst) REFERENCES name_basic(nconst) ON DELETE CASCADE
 );
 
-CREATE TABLE name_profession (
+CREATE TABLE nameProfession (
     nconst VARCHAR(20),
     profession VARCHAR(100),
     PRIMARY KEY (nconst, profession),
