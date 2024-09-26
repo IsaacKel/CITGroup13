@@ -268,3 +268,7 @@ SELECT
 	tconst, 
 	language
 FROM omdb_data;
+
+--Drop original tables
+DROP TABLE
+title_basics, name_basics, title_akas, title_crew, title_episode, title_principals, title_ratings;
