@@ -10,8 +10,8 @@ CREATE TABLE titleBasic (
     awards VARCHAR(255),
     plot TEXT,
     rated VARCHAR(50),
-    releaseDate DATE,
-    dvd DATE,
+    releaseDate VARCHAR(80),
+    dvd VARCHAR(80),
     productionCompany VARCHAR(255),
     poster VARCHAR(255),
     boxOffice VARCHAR(255),
@@ -50,7 +50,7 @@ CREATE TABLE titleAkas (
 
 CREATE TABLE titleLanguage (
     tconst VARCHAR(20),
-    language VARCHAR(50),
+    language VARCHAR(256),
     PRIMARY KEY (tconst, language),
     FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
@@ -67,14 +67,15 @@ CREATE TABLE titleEpisode (
 CREATE TABLE titleCharacters (
     nconst VARCHAR(20),
     tconst VARCHAR(20),
-    character VARCHAR(255),
-    PRIMARY KEY (nconst, tconst, character),
+    character VARCHAR(500),
+		ordering INT,
+    PRIMARY KEY (nconst, tconst, character, ordering),
     FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
 
 CREATE TABLE titleCountry (
     tconst VARCHAR(20),
-    country VARCHAR(50),
+    country VARCHAR(256),
     PRIMARY KEY (tconst, country),
     FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
@@ -93,7 +94,7 @@ CREATE TABLE titlePrincipals (
     ordering INT,
     nconst VARCHAR(20),
     category VARCHAR(50),
-    job VARCHAR(50), 
+    job VARCHAR, 
     PRIMARY KEY (tconst, ordering),
     FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE,
     FOREIGN KEY (nconst) REFERENCES nameBasic(nconst) ON DELETE CASCADE
@@ -202,3 +203,68 @@ SELECT
     attributes,
     isOriginalTitle
 FROM title_akas;
+
+-- Insert data into titleGenre by splitting genres from IMDb's title_basics
+INSERT INTO titleGenre (tconst, genre)
+SELECT 
+    tconst,
+    UNNEST(STRING_TO_ARRAY(genres, ',')) AS genre  -- Split genres by comma
+FROM title_basics;
+
+-- Insert data into titlePrincipals from IMDb's title_principals
+INSERT INTO titlePrincipals (tconst, ordering, nconst, category, job)
+SELECT 
+    tconst,
+    ordering,
+    nconst,
+    category,
+    job
+FROM title_principals;
+
+-- Insert data into titleCharacters from IMDb's title_principals
+INSERT INTO titleCharacters (nconst, tconst, character, ordering)
+SELECT 
+    nconst,
+    tconst,
+    REPLACE(REPLACE(REPLACE(characters, '[', ''), ']', ''), '''', '') AS cleaned_characters,
+    ordering
+FROM title_principals
+WHERE characters IS NOT NULL
+AND characters != ''
+AND category ='actor';
+
+--Insert data into nameKnownFor from IMDb's name_basics
+INSERT INTO nameKnownFor(nconst, knownfortitles)
+SELECT 
+	nconst,
+	UNNEST(STRING_TO_ARRAY(knownfortitles, ',')) AS knownfortitles  -- Split titles by comma
+FROM name_basics; 
+
+-- Insert data into nameProfession while ignoring duplicates
+INSERT INTO nameProfession (nconst, profession)
+SELECT DISTINCT nconst, category AS profession
+FROM title_principals
+ON CONFLICT (nconst, profession) DO NOTHING;
+
+-- Instert data into titleEpisde from IMDb's title_episode
+INSERT INTO titleEpisode(tconst, parenttconst, seasonnumber, episodenumber) 
+SELECT 
+	tconst, 
+	parenttconst, 
+	seasonnumber, 
+	episodenumber
+FROM title_episode; 
+
+--Insert data into titleCountry from omdb_data table
+INSERT INTO titleCountry(tconst, country) 
+SELECT 
+	tconst, 
+	country
+FROM omdb_data;
+
+--Insert data into titleLanguage from omdb_data table
+INSERT INTO titlelanguage(tconst, language) 
+SELECT 
+	tconst, 
+	language
+FROM omdb_data;
