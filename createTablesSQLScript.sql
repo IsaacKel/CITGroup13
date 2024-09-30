@@ -142,7 +142,7 @@ CREATE TABLE userSearchHistory (
 );
 
 CREATE TABLE userBookmarks (
-    bookmarkId INT PRIMARY KEY,
+    bookmarkId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     userId INT,
     tconst VARCHAR(20),
     nconst VARCHAR(20),
