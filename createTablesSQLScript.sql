@@ -116,7 +116,7 @@ CREATE TABLE nameProfession (
 );
 
 CREATE TABLE users (
-    userId INT PRIMARY KEY,
+   userId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username VARCHAR(50),
     email VARCHAR(100),
     password VARCHAR(100)
@@ -142,7 +142,7 @@ CREATE TABLE userSearchHistory (
 );
 
 CREATE TABLE userBookmarks (
-    bookmarkId INT PRIMARY KEY,
+    bookmarkId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     userId INT,
     tconst VARCHAR(20),
     nconst VARCHAR(20),
