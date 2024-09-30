@@ -116,7 +116,7 @@ CREATE TABLE nameProfession (
 );
 
 CREATE TABLE users (
-    userId INT PRIMARY KEY,
+   userId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username VARCHAR(50),
     email VARCHAR(100),
     password VARCHAR(100)
