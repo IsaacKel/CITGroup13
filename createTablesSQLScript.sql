@@ -134,7 +134,7 @@ CREATE TABLE userRatings (
 );
 
 CREATE TABLE userSearchHistory (
-    historyId INT PRIMARY KEY,
+    historyId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     userId INT,
     searchQuery TEXT,
     searchDate DATE,
