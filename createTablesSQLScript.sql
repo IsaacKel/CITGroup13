@@ -153,13 +153,14 @@ CREATE TABLE userBookmarks (
     FOREIGN KEY (nconst) REFERENCES nameBasic(nconst) ON DELETE CASCADE
 );
 
-CREATE TABLE wi (
-    tconst VARCHAR(20) PRIMARY KEY,
-    word VARCHAR(100),
-    field VARCHAR(100),
-    lexeme TEXT,
-    FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
-);
+-- Alter wi table to ensure foreign key constraints and same type as tconst in titleBasic
+ALTER TABLE wi 
+ALTER COLUMN tconst TYPE VARCHAR(20);
+-- Add the foreign key constraint
+ALTER TABLE wi
+ADD CONSTRAINT fk_tconst_titleBasic
+FOREIGN KEY (tconst) REFERENCES titleBasic(tconst)
+ON DELETE CASCADE;
 
 -- Insert data into titleBasic from IMDb's title_basics
 INSERT INTO titleBasic (tconst, titleType, primaryTitle, originalTitle, isAdult, startYear, endYear, runtimeMinutes)
