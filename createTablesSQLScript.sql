@@ -101,11 +101,12 @@ CREATE TABLE titlePrincipals (
 );
 
 
-CREATE TABLE nameKnownfor (
+CREATE TABLE nameKnownFor (
     nconst VARCHAR(20),
     knownForTitles VARCHAR(255),
     PRIMARY KEY (nconst, knownForTitles),
-    FOREIGN KEY (nconst) REFERENCES nameBasic(nconst) ON DELETE CASCADE
+    FOREIGN KEY (nconst) REFERENCES nameBasic(nconst) ON DELETE CASCADE,
+    FOREIGN KEY (knownForTitles) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
 
 CREATE TABLE nameProfession (
@@ -152,15 +153,6 @@ CREATE TABLE userBookmarks (
     FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE,
     FOREIGN KEY (nconst) REFERENCES nameBasic(nconst) ON DELETE CASCADE
 );
-
--- Alter wi table to ensure foreign key constraints and same type as tconst in titleBasic
-ALTER TABLE wi 
-ALTER COLUMN tconst TYPE VARCHAR(20);
--- Add the foreign key constraint
-ALTER TABLE wi
-ADD CONSTRAINT fk_tconst_titleBasic
-FOREIGN KEY (tconst) REFERENCES titleBasic(tconst)
-ON DELETE CASCADE;
 
 -- Insert data into titleBasic from IMDb's title_basics
 INSERT INTO titleBasic (tconst, titleType, primaryTitle, originalTitle, isAdult, startYear, endYear, runtimeMinutes)
@@ -265,13 +257,18 @@ WHERE characters IS NOT NULL
 AND characters != ''
 AND category ='actor';
 
---Insert data into nameKnownFor from IMDb's name_basics
-INSERT INTO nameKnownFor(nconst, knownfortitles)
+-- Insert data into nameKnownFor from IMDb's name_basics, ensuring only valid titles
+INSERT INTO nameKnownFor (nconst, knownForTitles)
 SELECT 
-	nconst,
-	UNNEST(STRING_TO_ARRAY(knownfortitles, ',')) AS knownfortitles  -- Split titles by comma
-	-- ONLY ADD MOVIES THAT ARE INCLUDED IN TITLEBASIC TABLE
-FROM name_basics; 
+    nb.nconst,
+    knownForTitles
+FROM (
+    SELECT 
+        nconst,
+        UNNEST(STRING_TO_ARRAY(knownForTitles, ',')) AS knownForTitles
+    FROM name_basics
+) AS nb
+JOIN titleBasic tb ON nb.knownForTitles = tb.tconst; 
 
 -- Insert data into nameProfession while ignoring duplicates
 INSERT INTO nameProfession (nconst, profession)
@@ -301,6 +298,15 @@ SELECT
 	tconst, 
 	language
 FROM omdb_data;
+
+-- Alter wi table to ensure foreign key constraints and same type as tconst in titleBasic
+ALTER TABLE wi 
+ALTER COLUMN tconst TYPE VARCHAR(20);
+-- Add the foreign key constraint
+ALTER TABLE wi
+ADD CONSTRAINT fk_tconst_titleBasic
+FOREIGN KEY (tconst) REFERENCES titleBasic(tconst)
+ON DELETE CASCADE;
 
 --Drop original tables
 -- DROP TABLE
