@@ -174,6 +174,37 @@ SELECT
     runtimeMinutes
 FROM title_basics;
 
+
+-- Insert data into titleBasic from omdb_data table
+INSERT INTO titleBasic (
+    tconst, awards, plot, rated, releaseDate, dvd, 
+    productioncompany, poster, boxOffice, website
+)
+SELECT 
+    tconst, 
+    awards, 
+    plot, 
+    rated, 
+    released,
+    dvd, 
+    production, 
+    poster, 
+    boxOffice, 
+    website
+FROM omdb_data
+ON CONFLICT (tconst) 
+DO UPDATE 
+SET 
+    awards = COALESCE(EXCLUDED.awards, titleBasic.awards),
+    plot = COALESCE(EXCLUDED.plot, titleBasic.plot),
+    rated = COALESCE(EXCLUDED.rated, titleBasic.rated),
+    releaseDate = COALESCE(EXCLUDED.releaseDate, titleBasic.releaseDate),
+    dvd = COALESCE(EXCLUDED.dvd, titleBasic.dvd),
+    productionCompany = COALESCE(EXCLUDED.productionCompany, titleBasic.productionCompany),
+    poster = COALESCE(EXCLUDED.poster, titleBasic.poster),
+    boxOffice = COALESCE(EXCLUDED.boxOffice, titleBasic.boxOffice),
+    website = COALESCE(EXCLUDED.website, titleBasic.website);
+
 -- Insert data into nameBasic from IMDb's name_basics
 INSERT INTO nameBasic (nconst, primaryName, birthYear, deathYear)
 SELECT 
@@ -238,6 +269,7 @@ INSERT INTO nameKnownFor(nconst, knownfortitles)
 SELECT 
 	nconst,
 	UNNEST(STRING_TO_ARRAY(knownfortitles, ',')) AS knownfortitles  -- Split titles by comma
+	-- ONLY ADD MOVIES THAT ARE INCLUDED IN TITLEBASIC TABLE
 FROM name_basics; 
 
 -- Insert data into nameProfession while ignoring duplicates
@@ -270,5 +302,5 @@ SELECT
 FROM omdb_data;
 
 --Drop original tables
-DROP TABLE
-title_basics, name_basics, title_akas, title_crew, title_episode, title_principals, title_ratings;
+-- DROP TABLE
+-- title_basics, name_basics, title_akas, title_crew, title_episode, title_principals, title_ratings;
