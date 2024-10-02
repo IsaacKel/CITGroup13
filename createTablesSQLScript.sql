@@ -61,7 +61,8 @@ CREATE TABLE titleEpisode (
     seasonNumber INT,
     episodeNumber INT,
     PRIMARY KEY (tconst),
-    FOREIGN KEY (parenttconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
+    FOREIGN KEY (parenttconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE,
+		FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
 
 CREATE TABLE titleCharacters (
