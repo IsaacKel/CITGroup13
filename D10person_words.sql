@@ -41,5 +41,3 @@ BEGIN
 
 END;
 $$ LANGUAGE plpgsql;
-
-SELECT * FROM person_words('Will Smith');
