@@ -106,6 +106,43 @@ CREATE TABLE nameKnownFor (
     FOREIGN KEY (knownForTitles) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
 
+CREATE TABLE users (
+   userId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    username VARCHAR(50),
+    email VARCHAR(100),
+    password VARCHAR(100)
+);
+
+CREATE TABLE userRatings (
+    userId INT,
+    tconst VARCHAR(10),
+    rating DECIMAL(3, 1),
+    ratingDate DATE,
+    PRIMARY KEY (userId, tconst, rating),
+    FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE,
+    FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
+);
+
+CREATE TABLE userSearchHistory (
+    userId INT,
+    searchQuery TEXT,
+    searchDate DATE,
+		PRIMARY KEY (userId, searchQuery, searchDate),
+    FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
+);
+
+CREATE TABLE userBookmarks (
+    bookmarkId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    userId INT,
+    tconst VARCHAR(20),
+    nconst VARCHAR(20),
+    note TEXT,
+    bookmarkDate DATE,
+    FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE,
+    FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE,
+    FOREIGN KEY (nconst) REFERENCES nameBasic(nconst) ON DELETE CASCADE
+);
+
 -- Insert data into titleBasic from IMDb's title_basics
 INSERT INTO titleBasic (tconst, titleType, primaryTitle, originalTitle, isAdult, startYear, endYear, runtimeMinutes)
 SELECT 
@@ -119,7 +156,6 @@ SELECT
     runtimeMinutes
 FROM title_basics;
 
-
 -- Insert data into titleBasic from omdb_data table
 INSERT INTO titleBasic (
     tconst, awards, plot, rated, releaseDate, dvd, 
@@ -127,15 +163,15 @@ INSERT INTO titleBasic (
 )
 SELECT 
     tconst, 
-    awards, 
-    plot, 
-    rated, 
-    released,
-    dvd, 
-    production, 
-    poster, 
-    boxOffice, 
-    website
+    NULLIF(NULLIF(awards, ''), 'N/A'), 
+    NULLIF(NULLIF(plot, ''), 'N/A'), 
+    NULLIF(NULLIF(rated, ''), 'N/A'), 
+    NULLIF(NULLIF(released, ''), 'N/A'),
+    NULLIF(NULLIF(dvd, ''), 'N/A'), 
+    NULLIF(NULLIF(production, ''), 'N/A'), 
+    NULLIF(NULLIF(poster, ''), 'N/A'), 
+    NULLIF(NULLIF(boxOffice, ''), 'N/A'), 
+    NULLIF(NULLIF(website, ''), 'N/A')
 FROM omdb_data
 ON CONFLICT (tconst) 
 DO UPDATE 
@@ -155,9 +191,9 @@ SET
 INSERT INTO nameBasic (nconst, primaryName, birthYear, deathYear)
 SELECT 
     nconst,
-    primaryName,
-    birthYear,
-    deathYear
+    NULLIF(NULLIF(primaryName, ''), 'N/A'),
+    NULLIF(NULLIF(birthYear, ''), 'N/A'),
+    NULLIF(NULLIF(deathYear, ''), 'N/A')
 FROM name_basics;
 
 -- Insert data into titleRatings from IMDb's title_ratings
@@ -173,11 +209,11 @@ INSERT INTO titleAkas (tconst, ordering, title, region, language, types, attribu
 SELECT 
     titleId AS tconst,
     ordering,
-    title,
-    region,
-    language,
-    types,
-    attributes,
+    NULLIF(NULLIF(title, ''), 'N/A'),
+    NULLIF(NULLIF(region, ''), 'N/A'),
+    NULLIF(NULLIF(language, ''), 'N/A'),
+    NULLIF(NULLIF(types, ''), 'N/A'),
+    NULLIF(NULLIF(attributes, ''), 'N/A'),
     isOriginalTitle
 FROM title_akas;
 
@@ -185,7 +221,7 @@ FROM title_akas;
 INSERT INTO titleGenre (tconst, genre)
 SELECT 
     tconst,
-    TRIM(UNNEST(STRING_TO_ARRAY(genres, ','))) AS genre  -- Split genres by comma
+    NULLIF(NULLIF(TRIM(UNNEST(STRING_TO_ARRAY(genres, ','))), ''), 'N/A') AS genre  -- Split genres by comma
 FROM title_basics;
 
 -- Insert data into titlePrincipals from IMDb's title_principals
@@ -194,8 +230,8 @@ SELECT
     tconst,
     ordering,
     nconst,
-    category,
-    job
+    NULLIF(NULLIF(category, ''), 'N/A'),
+    NULLIF(NULLIF(job, ''), 'N/A')
 FROM title_principals;
 
 -- Insert data into titleCharacters from IMDb's title_principals
@@ -203,7 +239,7 @@ INSERT INTO titleCharacters (nconst, tconst, character, ordering)
 SELECT 
     nconst,
     tconst,
-    REPLACE(REPLACE(REPLACE(characters, '[', ''), ']', ''), '''', '') AS cleaned_characters,
+    NULLIF(NULLIF(REPLACE(REPLACE(REPLACE(characters, '[', ''), ']', ''), '''', ''), ''), 'N/A') AS cleaned_characters,
     ordering
 FROM title_principals
 WHERE characters IS NOT NULL
@@ -218,44 +254,44 @@ SELECT
 FROM (
     SELECT 
         nconst,
-        TRIM(UNNEST(STRING_TO_ARRAY(knownForTitles, ','))) AS knownForTitles
+        NULLIF(NULLIF(TRIM(UNNEST(STRING_TO_ARRAY(knownForTitles, ','))), ''), 'N/A') AS knownForTitles
     FROM name_basics
 ) AS nb
 JOIN titleBasic tb ON nb.knownForTitles = tb.tconst; 
 
--- Instert data into titleEpisode from IMDb's title_episode
+-- Insert data into titleEpisode from IMDb's title_episode
 INSERT INTO titleEpisode(tconst, parenttconst, seasonnumber, episodenumber) 
 SELECT 
 	tconst, 
 	parenttconst, 
-	seasonnumber, 
-	episodenumber
+	NULLIF(seasonnumber, 'N/A'), 
+	NULLIF(episodenumber, 'N/A')
 FROM title_episode; 
 
---Insert data into titleCountry from omdb_data table
+-- Insert data into titleCountry from omdb_data table
 INSERT INTO titleCountry(tconst, country) 
 SELECT 
 	tconst, 
-	TRIM(UNNEST(STRING_TO_ARRAY(country, ','))) AS country  -- Split country by comma
+	NULLIF(NULLIF(TRIM(UNNEST(STRING_TO_ARRAY(country, ','))), ''), 'N/A') AS country  -- Split country by comma
 FROM omdb_data;
 
 -- Insert data into titleLanguage from omdb_data table, ignoring duplicates
 INSERT INTO titlelanguage(tconst, language) 
 SELECT 
     tconst, 
-    TRIM(UNNEST(STRING_TO_ARRAY(language, ','))) AS language  -- Split languages by comma and trim whitespace
+    NULLIF(NULLIF(TRIM(UNNEST(STRING_TO_ARRAY(language, ','))), ''), 'N/A') AS language  -- Split languages by comma and trim whitespace
 FROM omdb_data
 ON CONFLICT (tconst, language) DO NOTHING;  -- Ignore duplicates
 
 -- Alter wi table to ensure foreign key constraints and same type as tconst in titleBasic
 ALTER TABLE wi 
 ALTER COLUMN tconst TYPE VARCHAR(20);
+
 -- Add the foreign key constraint
 ALTER TABLE wi
 ADD CONSTRAINT fk_tconst_titleBasic
 FOREIGN KEY (tconst) REFERENCES titleBasic(tconst)
 ON DELETE CASCADE;
 
---Drop original tables
--- DROP TABLE
--- title_basics, name_basics, title_akas, title_crew, title_episode, title_principals, title_ratings;
+-- Drop original tables
+-- DROP TABLE title_basics, name_basics, title_akas, title_crew, title_episode, title_principals, title_ratings;
