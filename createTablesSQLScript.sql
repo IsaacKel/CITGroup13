@@ -1,32 +1,32 @@
 CREATE TABLE titleBasic (
-    tconst VARCHAR(20) PRIMARY KEY,
+    tconst VARCHAR(10) PRIMARY KEY,
     titleType VARCHAR(256),
     primaryTitle VARCHAR(256),
-    originalTitle VARCHAR(255),
+    originalTitle VARCHAR(256),
     isAdult BOOLEAN,
     startYear CHAR(4),
     endYear CHAR(4),
     runtimeMinutes INT,
-    awards VARCHAR(255),
+    awards VARCHAR(256),
     plot TEXT,
     rated VARCHAR(50),
     releaseDate VARCHAR(80),
     dvd VARCHAR(80),
-    productionCompany VARCHAR(255),
-    poster VARCHAR(255),
-    boxOffice VARCHAR(255),
-    website VARCHAR(255)
+    productionCompany VARCHAR(256),
+    poster VARCHAR(256),
+    boxOffice VARCHAR(256),
+    website VARCHAR(256)
 );
 
 CREATE TABLE nameBasic (
-    nconst VARCHAR(20) PRIMARY KEY,
-    primaryName VARCHAR(255),
+    nconst VARCHAR(10) PRIMARY KEY,
+    primaryName VARCHAR(256),
     birthYear CHAR(4),
     deathYear CHAR(4)
 );
 
 CREATE TABLE titleRatings (
-    tconst VARCHAR(20) PRIMARY KEY,
+    tconst VARCHAR(10) PRIMARY KEY,
     averageRating DECIMAL(3, 1),
     numVotes INT,
     rottenTomatoes INT,
@@ -36,9 +36,9 @@ CREATE TABLE titleRatings (
 
 --Potentially redundant table, can drop? 
 CREATE TABLE titleAkas (
-    tconst VARCHAR(20),
+    tconst VARCHAR(10),
     ordering INT,
-    title VARCHAR(255),
+    title VARCHAR(256),
     region VARCHAR(50),
     language VARCHAR(50),
     types VARCHAR(100),
@@ -48,16 +48,17 @@ CREATE TABLE titleAkas (
     FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
 
+--Still not seperated correctly
 CREATE TABLE titleLanguage (
-    tconst VARCHAR(20),
+    tconst VARCHAR(10),
     language VARCHAR(256),
     PRIMARY KEY (tconst, language),
     FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
 
 CREATE TABLE titleEpisode (
-    tconst VARCHAR(20),
-    parenttconst VARCHAR(20),
+    tconst VARCHAR(10),
+    parenttconst VARCHAR(10),
     seasonNumber INT,
     episodeNumber INT,
     PRIMARY KEY (tconst),
@@ -66,23 +67,24 @@ CREATE TABLE titleEpisode (
 );
 
 CREATE TABLE titleCharacters (
-    nconst VARCHAR(20),
-    tconst VARCHAR(20),
+    nconst VARCHAR(10),
+    tconst VARCHAR(10),
     character VARCHAR(500),
 		ordering INT,
     PRIMARY KEY (nconst, tconst, character, ordering),
     FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
 
+--Still not seperated correctly
 CREATE TABLE titleCountry (
-    tconst VARCHAR(20),
+    tconst VARCHAR(10),
     country VARCHAR(256),
     PRIMARY KEY (tconst, country),
     FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
 
 CREATE TABLE titleGenre (
-    tconst VARCHAR(20),
+    tconst VARCHAR(10),
     genre VARCHAR(50),
     PRIMARY KEY (tconst, genre),
     FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
@@ -91,9 +93,9 @@ CREATE TABLE titleGenre (
 
 		--potentialy remove job here
 CREATE TABLE titlePrincipals (
-    tconst VARCHAR(20),
+    tconst VARCHAR(10),
     ordering INT,
-    nconst VARCHAR(20),
+    nconst VARCHAR(10),
     category VARCHAR(50),
     job VARCHAR, 
     PRIMARY KEY (tconst, ordering),
@@ -103,19 +105,13 @@ CREATE TABLE titlePrincipals (
 
 
 CREATE TABLE nameKnownFor (
-    nconst VARCHAR(20),
-    knownForTitles VARCHAR(255),
+    nconst VARCHAR(10),
+    knownForTitles VARCHAR(256),
     PRIMARY KEY (nconst, knownForTitles),
     FOREIGN KEY (nconst) REFERENCES nameBasic(nconst) ON DELETE CASCADE,
     FOREIGN KEY (knownForTitles) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
 
-CREATE TABLE nameProfession (
-    nconst VARCHAR(20),
-    profession VARCHAR(100),
-    PRIMARY KEY (nconst, profession),
-    FOREIGN KEY (nconst) REFERENCES nameBasic(nconst) ON DELETE CASCADE
-);
 
 CREATE TABLE users (
    userId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -126,20 +122,19 @@ CREATE TABLE users (
 
 CREATE TABLE userRatings (
     userId INT,
-    ratingId INT,
-    tconst VARCHAR(20),
-    rating DECIMAL(2, 1),
+    tconst VARCHAR(10),
+    rating DECIMAL(3, 1),
     ratingDate DATE,
-    PRIMARY KEY (userId, ratingId),
+    PRIMARY KEY (userId, tconst, rating),
     FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE,
     FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
 
 CREATE TABLE userSearchHistory (
-    historyId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     userId INT,
     searchQuery TEXT,
     searchDate DATE,
+		PRIMARY KEY (userId, searchQuery, searchDate),
     FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
 );
 
@@ -193,6 +188,7 @@ SET
     plot = COALESCE(EXCLUDED.plot, titleBasic.plot),
     rated = COALESCE(EXCLUDED.rated, titleBasic.rated),
     releaseDate = COALESCE(EXCLUDED.releaseDate, titleBasic.releaseDate),
+		--potentially remove dvd data? 
     dvd = COALESCE(EXCLUDED.dvd, titleBasic.dvd),
     productionCompany = COALESCE(EXCLUDED.productionCompany, titleBasic.productionCompany),
     poster = COALESCE(EXCLUDED.poster, titleBasic.poster),
@@ -233,7 +229,7 @@ FROM title_akas;
 INSERT INTO titleGenre (tconst, genre)
 SELECT 
     tconst,
-    UNNEST(STRING_TO_ARRAY(genres, ',')) AS genre  -- Split genres by comma
+    TRIM(UNNEST(STRING_TO_ARRAY(genres, ','))) AS genre  -- Split genres by comma
 FROM title_basics;
 
 -- Insert data into titlePrincipals from IMDb's title_principals
@@ -258,7 +254,7 @@ WHERE characters IS NOT NULL
 AND characters != ''
 AND category ='actor';
 
--- Insert data into nameKnownFor from IMDb's name_basics, ensuring only valid titles
+-- Insert data into nameKnownFor from IMDb's name_basics, ensuring only valid titles that are included in our database
 INSERT INTO nameKnownFor (nconst, knownForTitles)
 SELECT 
     nb.nconst,
@@ -266,18 +262,12 @@ SELECT
 FROM (
     SELECT 
         nconst,
-        UNNEST(STRING_TO_ARRAY(knownForTitles, ',')) AS knownForTitles
+        TRIM(UNNEST(STRING_TO_ARRAY(knownForTitles, ','))) AS knownForTitles
     FROM name_basics
 ) AS nb
 JOIN titleBasic tb ON nb.knownForTitles = tb.tconst; 
 
--- Insert data into nameProfession while ignoring duplicates
-INSERT INTO nameProfession (nconst, profession)
-SELECT DISTINCT nconst, category AS profession
-FROM title_principals
-ON CONFLICT (nconst, profession) DO NOTHING;
-
--- Instert data into titleEpisde from IMDb's title_episode
+-- Instert data into titleEpisode from IMDb's title_episode
 INSERT INTO titleEpisode(tconst, parenttconst, seasonnumber, episodenumber) 
 SELECT 
 	tconst, 
@@ -290,15 +280,16 @@ FROM title_episode;
 INSERT INTO titleCountry(tconst, country) 
 SELECT 
 	tconst, 
-	country
+	TRIM(UNNEST(STRING_TO_ARRAY(country, ','))) AS country  -- Split country by comma
 FROM omdb_data;
 
---Insert data into titleLanguage from omdb_data table
+-- Insert data into titleLanguage from omdb_data table, ignoring duplicates
 INSERT INTO titlelanguage(tconst, language) 
 SELECT 
-	tconst, 
-	language
-FROM omdb_data;
+    tconst, 
+    TRIM(UNNEST(STRING_TO_ARRAY(language, ','))) AS language  -- Split languages by comma and trim whitespace
+FROM omdb_data
+ON CONFLICT (tconst, language) DO NOTHING;  -- Ignore duplicates
 
 -- Alter wi table to ensure foreign key constraints and same type as tconst in titleBasic
 ALTER TABLE wi 
