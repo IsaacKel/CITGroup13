@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION "public"."get_bookmarked_movies"("p_userid" INT)
+CREATE OR REPLACE FUNCTION "public"."get_bookmarks"("p_userid" INT)
   RETURNS TABLE("tconst" varchar, "title" varchar) AS $BODY$
 BEGIN
     RETURN QUERY 
