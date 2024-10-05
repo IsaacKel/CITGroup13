@@ -106,53 +106,16 @@ CREATE TABLE nameKnownFor (
     FOREIGN KEY (knownForTitles) REFERENCES titleBasic(tconst) ON DELETE CASCADE
 );
 
-CREATE TABLE users (
-   userId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    username VARCHAR(50),
-    email VARCHAR(100),
-    password VARCHAR(100)
-);
-
-CREATE TABLE userRatings (
-    userId INT,
-    tconst VARCHAR(10),
-    rating DECIMAL(3, 1),
-    ratingDate DATE,
-    PRIMARY KEY (userId, tconst, rating),
-    FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE,
-    FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE
-);
-
-CREATE TABLE userSearchHistory (
-    userId INT,
-    searchQuery TEXT,
-    searchDate DATE,
-		PRIMARY KEY (userId, searchQuery, searchDate),
-    FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
-);
-
-CREATE TABLE userBookmarks (
-    bookmarkId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    userId INT,
-    tconst VARCHAR(20),
-    nconst VARCHAR(20),
-    note TEXT,
-    bookmarkDate DATE,
-    FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE,
-    FOREIGN KEY (tconst) REFERENCES titleBasic(tconst) ON DELETE CASCADE,
-    FOREIGN KEY (nconst) REFERENCES nameBasic(nconst) ON DELETE CASCADE
-);
-
 -- Insert data into titleBasic from IMDb's title_basics
 INSERT INTO titleBasic (tconst, titleType, primaryTitle, originalTitle, isAdult, startYear, endYear, runtimeMinutes)
 SELECT 
     tconst,
-    titleType,
-    primaryTitle,
-    originalTitle,
+    NULLIF(NULLIF(titleType, 'N/A'), ''),
+    NULLIF(NULLIF(primaryTitle, 'N/A'), ''),
+    NULLIF(NULLIF(originalTitle, 'N/A'), ''),
     isAdult,
-    startYear,
-    endYear,
+    NULLIF(NULLIF(startYear, 'N/A'), ''),
+    NULLIF(NULLIF(endYear, 'N/A'), ''),
     runtimeMinutes
 FROM title_basics;
 
@@ -163,37 +126,36 @@ INSERT INTO titleBasic (
 )
 SELECT 
     tconst, 
-    NULLIF(NULLIF(awards, ''), 'N/A'), 
-    NULLIF(NULLIF(plot, ''), 'N/A'), 
-    NULLIF(NULLIF(rated, ''), 'N/A'), 
-    NULLIF(NULLIF(released, ''), 'N/A'),
-    NULLIF(NULLIF(dvd, ''), 'N/A'), 
-    NULLIF(NULLIF(production, ''), 'N/A'), 
-    NULLIF(NULLIF(poster, ''), 'N/A'), 
-    NULLIF(NULLIF(boxOffice, ''), 'N/A'), 
-    NULLIF(NULLIF(website, ''), 'N/A')
+    NULLIF(NULLIF(awards, 'N/A'), ''),
+    NULLIF(NULLIF(plot, 'N/A'), ''),
+    NULLIF(NULLIF(rated, 'N/A'), ''),
+    NULLIF(NULLIF(released, 'N/A'), ''),
+    NULLIF(NULLIF(dvd, 'N/A'), ''),
+    NULLIF(NULLIF(production, 'N/A'), ''),
+    NULLIF(NULLIF(poster, 'N/A'), ''),
+    NULLIF(NULLIF(boxOffice, 'N/A'), ''),
+    NULLIF(NULLIF(website, 'N/A'), '')
 FROM omdb_data
 ON CONFLICT (tconst) 
 DO UPDATE 
 SET 
-    awards = COALESCE(EXCLUDED.awards, titleBasic.awards),
-    plot = COALESCE(EXCLUDED.plot, titleBasic.plot),
-    rated = COALESCE(EXCLUDED.rated, titleBasic.rated),
-    releaseDate = COALESCE(EXCLUDED.releaseDate, titleBasic.releaseDate),
-		--potentially remove dvd data? 
-    dvd = COALESCE(EXCLUDED.dvd, titleBasic.dvd),
-    productionCompany = COALESCE(EXCLUDED.productionCompany, titleBasic.productionCompany),
-    poster = COALESCE(EXCLUDED.poster, titleBasic.poster),
-    boxOffice = COALESCE(EXCLUDED.boxOffice, titleBasic.boxOffice),
-    website = COALESCE(EXCLUDED.website, titleBasic.website);
+    awards = COALESCE(NULLIF(NULLIF(EXCLUDED.awards, 'N/A'), ''), titleBasic.awards),
+    plot = COALESCE(NULLIF(NULLIF(EXCLUDED.plot, 'N/A'), ''), titleBasic.plot),
+    rated = COALESCE(NULLIF(NULLIF(EXCLUDED.rated, 'N/A'), ''), titleBasic.rated),
+    releaseDate = COALESCE(NULLIF(NULLIF(EXCLUDED.releaseDate, 'N/A'), ''), titleBasic.releaseDate),
+    dvd = COALESCE(NULLIF(NULLIF(EXCLUDED.dvd, 'N/A'), ''), titleBasic.dvd),
+    productionCompany = COALESCE(NULLIF(NULLIF(EXCLUDED.productionCompany, 'N/A'), ''), titleBasic.productionCompany),
+    poster = COALESCE(NULLIF(NULLIF(EXCLUDED.poster, 'N/A'), ''), titleBasic.poster),
+    boxOffice = COALESCE(NULLIF(NULLIF(EXCLUDED.boxOffice, 'N/A'), ''), titleBasic.boxOffice),
+    website = COALESCE(NULLIF(NULLIF(EXCLUDED.website, 'N/A'), ''), titleBasic.website);
 
 -- Insert data into nameBasic from IMDb's name_basics
 INSERT INTO nameBasic (nconst, primaryName, birthYear, deathYear)
 SELECT 
     nconst,
-    NULLIF(NULLIF(primaryName, ''), 'N/A'),
-    NULLIF(NULLIF(birthYear, ''), 'N/A'),
-    NULLIF(NULLIF(deathYear, ''), 'N/A')
+    NULLIF(NULLIF(primaryName, 'N/A'), ''),
+    NULLIF(NULLIF(birthYear, 'N/A'), ''),
+    NULLIF(NULLIF(deathYear, 'N/A'), '')
 FROM name_basics;
 
 -- Insert data into titleRatings from IMDb's title_ratings
@@ -204,16 +166,50 @@ SELECT
     numVotes
 FROM title_ratings;
 
+-- Insert data into titleRatings from omdb_data table with Rotten Tomatoes and Metacritic ratings
+WITH RatingsExtract AS (
+    SELECT 
+        od.tconst,
+        -- Extract Rotten Tomatoes rating
+        CAST(
+            TRIM(BOTH '%' FROM (
+                SELECT rating ->> 'Value'
+                FROM jsonb_array_elements(od.ratings::jsonb) AS rating
+                WHERE rating ->> 'Source' = 'Rotten Tomatoes'
+                LIMIT 1
+            )) AS INT
+        ) AS rottenTomatoes,
+        -- Extract Metacritic rating
+        CAST(
+            SPLIT_PART(
+                (
+                    SELECT rating ->> 'Value'
+                    FROM jsonb_array_elements(od.ratings::jsonb) AS rating
+                    WHERE rating ->> 'Source' = 'Metacritic'
+                    LIMIT 1
+                ), '/', 1
+            ) AS INT
+        ) AS metaCritic
+    FROM omdb_data od
+)
+-- Update titleRatings table with the extracted ratings from omdb_data
+UPDATE titleRatings tr
+SET 
+    rottenTomatoes = COALESCE(re.rottenTomatoes, tr.rottenTomatoes), -- Update only if new value is found
+    metaCritic = COALESCE(re.metaCritic, tr.metaCritic)              -- Update only if new value is found
+FROM RatingsExtract re
+WHERE tr.tconst = re.tconst;
+
 -- Insert data into titleAkas from IMDb's title_akas
 INSERT INTO titleAkas (tconst, ordering, title, region, language, types, attributes, isOriginalTitle)
 SELECT 
     titleId AS tconst,
     ordering,
-    NULLIF(NULLIF(title, ''), 'N/A'),
-    NULLIF(NULLIF(region, ''), 'N/A'),
-    NULLIF(NULLIF(language, ''), 'N/A'),
-    NULLIF(NULLIF(types, ''), 'N/A'),
-    NULLIF(NULLIF(attributes, ''), 'N/A'),
+    NULLIF(NULLIF(title, 'N/A'), ''),
+    NULLIF(NULLIF(region, 'N/A'), ''),
+    NULLIF(NULLIF(language, 'N/A'), ''),
+    NULLIF(NULLIF(types, 'N/A'), ''),
+    NULLIF(NULLIF(attributes, 'N/A'), ''),
     isOriginalTitle
 FROM title_akas;
 
@@ -221,7 +217,7 @@ FROM title_akas;
 INSERT INTO titleGenre (tconst, genre)
 SELECT 
     tconst,
-    NULLIF(NULLIF(TRIM(UNNEST(STRING_TO_ARRAY(genres, ','))), ''), 'N/A') AS genre  -- Split genres by comma
+    TRIM(NULLIF(NULLIF(UNNEST(STRING_TO_ARRAY(genres, ',')), 'N/A'), ''))
 FROM title_basics;
 
 -- Insert data into titlePrincipals from IMDb's title_principals
@@ -230,8 +226,8 @@ SELECT
     tconst,
     ordering,
     nconst,
-    NULLIF(NULLIF(category, ''), 'N/A'),
-    NULLIF(NULLIF(job, ''), 'N/A')
+    NULLIF(NULLIF(category, 'N/A'), ''),
+    NULLIF(NULLIF(job, 'N/A'), '')
 FROM title_principals;
 
 -- Insert data into titleCharacters from IMDb's title_principals
@@ -239,59 +235,59 @@ INSERT INTO titleCharacters (nconst, tconst, character, ordering)
 SELECT 
     nconst,
     tconst,
-    NULLIF(NULLIF(REPLACE(REPLACE(REPLACE(characters, '[', ''), ']', ''), '''', ''), ''), 'N/A') AS cleaned_characters,
+    REPLACE(REPLACE(REPLACE(NULLIF(NULLIF(characters, 'N/A'), ''), '[', ''), ']', ''), '''', '') AS cleaned_characters,
     ordering
 FROM title_principals
 WHERE characters IS NOT NULL
 AND characters != ''
-AND category ='actor';
+AND category = 'actor';
 
 -- Insert data into nameKnownFor from IMDb's name_basics, ensuring only valid titles that are included in our database
 INSERT INTO nameKnownFor (nconst, knownForTitles)
 SELECT 
     nb.nconst,
-    knownForTitles
+    nb.knownForTitles
 FROM (
     SELECT 
         nconst,
-        NULLIF(NULLIF(TRIM(UNNEST(STRING_TO_ARRAY(knownForTitles, ','))), ''), 'N/A') AS knownForTitles
+        TRIM(NULLIF(NULLIF(UNNEST(STRING_TO_ARRAY(NULLIF(knownForTitles, 'N/A'), ',')), ''), '')) AS knownForTitles
     FROM name_basics
 ) AS nb
-JOIN titleBasic tb ON nb.knownForTitles = tb.tconst; 
+JOIN titleBasic tb ON nb.knownForTitles = tb.tconst;
 
 -- Insert data into titleEpisode from IMDb's title_episode
 INSERT INTO titleEpisode(tconst, parenttconst, seasonnumber, episodenumber) 
 SELECT 
-	tconst, 
-	parenttconst, 
-	NULLIF(seasonnumber, 'N/A'), 
-	NULLIF(episodenumber, 'N/A')
+    tconst, 
+    parenttconst, 
+    seasonnumber, 
+    episodenumber
 FROM title_episode; 
 
 -- Insert data into titleCountry from omdb_data table
 INSERT INTO titleCountry(tconst, country) 
 SELECT 
-	tconst, 
-	NULLIF(NULLIF(TRIM(UNNEST(STRING_TO_ARRAY(country, ','))), ''), 'N/A') AS country  -- Split country by comma
+    tconst, 
+    TRIM(NULLIF(NULLIF(UNNEST(STRING_TO_ARRAY(NULLIF(country, 'N/A'), ',')), ''), ''))
 FROM omdb_data;
 
 -- Insert data into titleLanguage from omdb_data table, ignoring duplicates
-INSERT INTO titlelanguage(tconst, language) 
+INSERT INTO titleLanguage(tconst, language) 
 SELECT 
     tconst, 
-    NULLIF(NULLIF(TRIM(UNNEST(STRING_TO_ARRAY(language, ','))), ''), 'N/A') AS language  -- Split languages by comma and trim whitespace
+    TRIM(NULLIF(NULLIF(UNNEST(STRING_TO_ARRAY(NULLIF(language, 'N/A'), ',')), ''), ''))
 FROM omdb_data
-ON CONFLICT (tconst, language) DO NOTHING;  -- Ignore duplicates
+ON CONFLICT (tconst, language) DO NOTHING;
 
 -- Alter wi table to ensure foreign key constraints and same type as tconst in titleBasic
 ALTER TABLE wi 
 ALTER COLUMN tconst TYPE VARCHAR(20);
-
 -- Add the foreign key constraint
 ALTER TABLE wi
 ADD CONSTRAINT fk_tconst_titleBasic
 FOREIGN KEY (tconst) REFERENCES titleBasic(tconst)
 ON DELETE CASCADE;
 
--- Drop original tables
--- DROP TABLE title_basics, name_basics, title_akas, title_crew, title_episode, title_principals, title_ratings;
+--Drop original tables
+-- DROP TABLE
+-- title_basics, name_basics, title_akas, title_crew, title_episode, title_principals, title_ratings;
