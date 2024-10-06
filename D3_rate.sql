@@ -1,4 +1,4 @@
-create or replace PROCEDURE rate(titleId VARCHAR(20), _rating int4, _userId int4)
+create or replace PROCEDURE rate(titleId VARCHAR(10), _rating int4, _userId int4)
 LANGUAGE plpgsql as $$
 declare oldRating int;
 oldnumvotes int;
@@ -18,8 +18,8 @@ if _rating between 1 and 10 then
   ELSE
     --new rating
     --insert into userratings
-    insert into userratings(userid, ratingid, tconst, rating, ratingdate)
-    values (_userId, (_userId+_rating), titleId, _rating, CURRENT_DATE);
+    insert into userratings(userid, tconst, rating, ratingdate)
+    values (_userId, titleId, _rating, CURRENT_DATE);
     --update titleratings
     update titleratings set numvotes = numvotes + 1,
     averagerating = (COALESCE(oldnumvotes,0)*COALESCE( oldaveragerating,0) + _rating)/(COALESCE(oldnumvotes)+1) where tconst = titleId;
