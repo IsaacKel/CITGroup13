@@ -7,12 +7,12 @@ BEGIN
     -- Perform the search with prioritization of exact matches
     RETURN QUERY 
     SELECT tb.tconst::VARCHAR, tb.primarytitle::VARCHAR
-    FROM title_basics tb
+    FROM titlebasic tb
     WHERE tb.primarytitle ILIKE '%' || p_search_string || '%' 
        OR tb.tconst IN (
-           SELECT od.tconst 
-           FROM omdb_data od
-           WHERE od.plot ILIKE '%' || p_search_string || '%'
+           SELECT tb.tconst 
+           FROM titlebasic tb
+           WHERE tb.plot ILIKE '%' || p_search_string || '%'
        )
     ORDER BY 
        -- Exact matches first
