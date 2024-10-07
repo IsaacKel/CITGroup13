@@ -7,7 +7,7 @@ BEGIN
         tb.primarytitle::VARCHAR,          
         COUNT(DISTINCT wi.word)::INT AS match_count
     FROM 
-        title_basics tb
+        titlebasic tb
     JOIN 
         wi ON tb.tconst = wi.tconst
     WHERE 
