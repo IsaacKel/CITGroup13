@@ -1,9 +1,12 @@
-alter table namebasic add IF NOT EXISTS nRating numeric(5,1);
-
-create index IF NOT EXISTS index_tp_nconst on titleprincipals(nconst);
-
-update namebasic set nRating = (select round(sum(tr.averagerating*tr.numvotes)/sum(tr.numvotes),1) from titleprincipals tp inner join titleratings tr on tp.tconst = tr.tconst where namebasic.nconst = tp.nconst);
-
-create index IF NOT EXISTS index_tp_category on titleprincipals(category);
-create index IF NOT EXISTS index_nb_nrating on namebasic(nrating);
-create index IF NOT EXISTS index_tr_numvotes on titleratings(numvotes);
+ALTER TABLE namebasic ADD IF NOT EXISTS nRating NUMERIC (5,1);
+CREATE INDEX IF NOT EXISTS index_tp_nconst ON titleprincipals (nconst);
+UPDATE namebasic
+SET nRating=(
+SELECT round(SUM (tr.averagerating*tr.numvotes)/SUM (tr.numvotes),1) FROM titleprincipals tp INNER JOIN titleratings tr ON tp.tconst=tr.tconst WHERE namebasic.nconst=tp.nconst);
+CREATE INDEX IF NOT EXISTS index_tp_category ON titleprincipals (category);
+CREATE INDEX IF NOT EXISTS index_nb_nrating ON namebasic (nrating);
+CREATE INDEX IF NOT EXISTS index_tr_numvotes ON titleratings (numvotes);
+CREATE INDEX IF NOT EXISTS index_tp_tconst ON titleprincipals (tconst);
+CREATE INDEX IF NOT EXISTS index_tb_primarytitle ON titlebasic (primarytitle);
+CREATE INDEX IF NOT EXISTS index_tl_languages ON titlelanguage (language);
+CREATE INDEX IF NOT EXISTS index_tg_genre ON titlegenre (genre);
