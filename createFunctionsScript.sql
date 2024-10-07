@@ -261,7 +261,8 @@ LANGUAGE plpgsql as $$
 BEGIN
 
 return query
-select nb.nconst, nb.nRating from (select tp.nconst from titleprincipals tp where tp.tconst = testId and (category = 'actor' or category = 'actress')) natural join namebasic nb order by nb.nRating DESC;
+select nb.nconst, nb.nRating from (select tp.nconst from titleprincipals tp where tp.tconst = testId and (category = 'actor' or category = 'actress')) as tp_alias
+natural join namebasic nb order by nb.nRating DESC;
 
 END;
 $$;
@@ -281,7 +282,8 @@ LANGUAGE plpgsql as $$
 BEGIN
 
 return query
-select nb.nconst, nb.nRating from (select tp.nconst from titleprincipals tp where tp.tconst = testId and category != 'actor' and category != 'actress') natural join namebasic nb order by nb.nRating DESC;
+select nb.nconst, nb.nRating from (select tp.nconst from titleprincipals tp where tp.tconst = testId and category != 'actor' and category != 'actress') as tp_alias
+natural join namebasic nb order by nb.nRating DESC;
 
 END;
 $$;
@@ -301,8 +303,6 @@ order by tr.numvotes DESC limit 10;
 
 END;
 $$;
-
-DROP FUNCTION IF EXISTS person_words(VARCHAR, INTEGER);
 
 CREATE OR REPLACE FUNCTION person_words(
     p_primaryname VARCHAR,     -- The name of the person we're interested in
