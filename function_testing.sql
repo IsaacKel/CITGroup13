@@ -40,6 +40,6 @@ SELECT * FROM person_words('Will Smith');
 --D11 test
 SELECT * FROM exact_match_query(ARRAY['inception', 'dream']);
 --D12 test
-SELECT * FROM best_match_query(ARRAY['inception', 'dream']);
+SELECT * FROM best_match_query(ARRAY['inception', 'dream']) LIMIT 100;
 --D13 test
-SELECT * FROM word_to_words_query(ARRAY['inception', 'dream']);
+SELECT * FROM word_to_words_query(ARRAY['inception', 'dream']) limit 100;
