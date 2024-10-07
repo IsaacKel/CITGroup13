@@ -10,7 +10,7 @@ BEGIN
     FROM 
         userbookmarks b
     JOIN 
-        titlebasics tb ON b.tconst = tb.tconst
+        titlebasic tb ON b.tconst = tb.tconst
     WHERE 
         b.userid = p_userid
 
