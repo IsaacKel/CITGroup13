@@ -24,7 +24,7 @@ BEGIN
     FROM 
         userbookmarks b
     JOIN 
-        namebasics nb ON b.nconst = nb.nconst
+        namebasic nb ON b.nconst = nb.nconst
     WHERE 
         b.userid = p_userid;
 END;
