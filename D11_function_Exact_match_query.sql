@@ -3,7 +3,7 @@ RETURNS TABLE(tconst VARCHAR, title VARCHAR) AS $$
 BEGIN
     RETURN QUERY
     SELECT tb.tconst::VARCHAR, tb.primarytitle::VARCHAR
-    FROM title_basics tb
+    FROM titlebasic tb
     JOIN (
         SELECT wi.tconst
         FROM wi
