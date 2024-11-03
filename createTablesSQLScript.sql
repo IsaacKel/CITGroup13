@@ -114,11 +114,15 @@ CREATE TABLE nameKnownFor (
 
 
 CREATE TABLE users (
-   userId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    userId INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username VARCHAR(50),
     email VARCHAR(100),
-    password VARCHAR(100)
+    password VARCHAR(100),
+    salt VARCHAR(100),
+    name VARCHAR(50),
+    role VARCHAR(50)
 );
+
 
 CREATE TABLE userRatings (
     userId INT,
