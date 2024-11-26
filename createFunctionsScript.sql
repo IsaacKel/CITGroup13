@@ -474,3 +474,23 @@ BEGIN
         tp.ordering;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION "public"."top10actors"()
+  RETURNS TABLE("nconst" varchar, "primaryname" varchar, "total_numvotes" int4) AS $BODY$
+BEGIN
+
+return query
+select nb.nconst, nb.primaryname, sum(tr.numvotes)::int4 as total_numvotes
+from namebasic nb
+join titleprincipals tp on nb.nconst = tp.nconst
+join titleratings tr on tp.tconst = tr.tconst
+where tp.category IN ('actor', 'actress')
+group by nb.nconst, nb.primaryname
+order by total_numvotes DESC
+limit 10;
+
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 10
