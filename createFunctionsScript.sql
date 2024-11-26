@@ -494,3 +494,22 @@ $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100
   ROWS 10
+
+
+CREATE OR REPLACE FUNCTION "public"."top10movies"()
+  RETURNS TABLE("tconst" varchar, "titletype" varchar, "primarytitle" varchar, "poster" varchar) AS $BODY$
+BEGIN
+
+return query
+select tb.tconst, tb.titletype, tb.primarytitle, tb.poster
+from titlebasic tb
+join titleratings tr on tb.tconst = tr.tconst
+where tb.titletype = 'movie'
+order by tr.numvotes DESC
+limit 10;
+
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 10
