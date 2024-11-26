@@ -117,7 +117,7 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100
-  ROWS 1000  
+  ROWS 1000;  
   
   CREATE OR REPLACE FUNCTION "public"."string_search"("p_search_string" varchar, "p_userid" int4)
   RETURNS TABLE("tconst" varchar, "title" varchar) AS $BODY$
@@ -343,7 +343,7 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100
-  ROWS 1000
+  ROWS 1000;
 
 CREATE OR REPLACE FUNCTION person_words(
     p_primaryname VARCHAR,     -- The name of the person we're interested in
@@ -493,7 +493,7 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100
-  ROWS 10
+  ROWS 10;
 
 
 CREATE OR REPLACE FUNCTION "public"."top10movies"()
@@ -512,7 +512,7 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100
-  ROWS 10
+  ROWS 10;
 
 CREATE OR REPLACE FUNCTION "public"."top10series"()
   RETURNS TABLE("tconst" varchar, "titletype" varchar, "primarytitle" varchar, "poster" varchar) AS $BODY$
@@ -530,4 +530,4 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100
-  ROWS 10
+  ROWS 10;
