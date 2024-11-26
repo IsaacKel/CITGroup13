@@ -82,31 +82,42 @@ COST 100
 ROWS 1000;
 
 CREATE OR REPLACE FUNCTION "public"."string_search"("p_search_string" varchar)
-  RETURNS TABLE("tconst" varchar, "title" varchar) AS $BODY$
+  RETURNS TABLE("tconst" varchar, "title" varchar, "poster" varchar, "startYear" int4, "genre" varchar, "rating" numeric) AS $BODY$
 BEGIN
     RETURN QUERY 
-    SELECT tb.tconst::VARCHAR, tb.primarytitle::VARCHAR
+    SELECT 
+        tb.tconst::VARCHAR,              
+        tb.primarytitle::VARCHAR,        
+        tb.poster::VARCHAR,               
+        tb.startyear::INTEGER,           
+        STRING_AGG(tg.genre, ', ')::VARCHAR AS genre, 
+        tr.averagerating::NUMERIC        
     FROM titlebasic tb
+    LEFT JOIN titleratings tr ON tb.tconst = tr.tconst 
+    LEFT JOIN titlegenre tg ON tb.tconst = tg.tconst    
     WHERE tb.primarytitle ILIKE '%' || p_search_string || '%' 
        OR tb.tconst IN (
            SELECT tb.tconst 
            FROM titlebasic tb
            WHERE tb.plot ILIKE '%' || p_search_string || '%'
        )
+    GROUP BY 
+        tb.tconst, 
+        tb.primarytitle, 
+        tb.poster, 
+        tb.startyear, 
+        tr.averagerating 
     ORDER BY 
-       -- Exact matches first
-       CASE 
-           WHEN tb.primarytitle ILIKE p_search_string THEN 1
-           ELSE 2
-       END, 
-       -- Then sort by closest partial matches
-       tb.primarytitle;
+        CASE 
+            WHEN tb.primarytitle ILIKE p_search_string THEN 1
+            ELSE 2
+        END, 
+        tb.primarytitle;
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100
-  ROWS 1000;
-  
+  ROWS 1000  
   
   CREATE OR REPLACE FUNCTION "public"."string_search"("p_search_string" varchar, "p_userid" int4)
   RETURNS TABLE("tconst" varchar, "title" varchar) AS $BODY$
@@ -288,21 +299,51 @@ natural join namebasic nb order by nb.nRating DESC;
 END;
 $$;
 
-create or replace function similarMovies(testId VARCHAR(10)) returns table (tconst VARCHAR(10), primarytitle VARCHAR(256), numvotes int4)
-LANGUAGE plpgsql as $$
+CREATE OR REPLACE FUNCTION "public"."similarmovies"("testid" varchar)
+  RETURNS TABLE("tconst" varchar, "primarytitle" varchar, "numvotes" int4, "matching_languages" int4, "poster" varchar) AS $BODY$
 BEGIN
 
 return query
-select DISTINCT tb.tconst, tb.primarytitle, tr.numvotes from titlebasic tb 
-natural join titlegenre tg 
-natural join titlelanguage tl 
-natural join titleratings tr 
-where tg.genre in (select tg.genre from titlegenre tg where tg.tconst = testId) 
-and tl.language in (select language from titlelanguage tl where tl.tconst = testId) 
-order by tr.numvotes DESC limit 10;
+select t.tconst, t.primarytitle, t.numvotes, t.matching_languages::int4, t.poster
+from (
+    select tb.tconst, tb.primarytitle, tr.numvotes, 
+    (select count(*) from titlelanguage tl1 
+     where tl1.tconst = tb.tconst
+     and tl1.language in (select language from titlelanguage tl2 where tl2.tconst = testid)) as matching_languages,
+    tb.poster,
+    row_number() over (partition by tb.tconst order by 
+                      (select count(*) from titlelanguage tl1 
+                       where tl1.tconst = tb.tconst
+                       and tl1.language in (select language from titlelanguage tl2 where tl2.tconst = testid)) desc, 
+                      tr.numvotes desc) as rn
+    from titlebasic tb
+    natural join titlegenre tg
+    natural join titleratings tr
+    where tb.tconst IN (
+        select tg_outer.tconst
+        from titlegenre tg_outer
+        where tg_outer.genre IN (
+            select tg_inner.genre
+            from titlegenre tg_inner
+            where tg_inner.tconst = testid
+        )
+        group by tg_outer.tconst
+        having count(distinct tg_outer.genre) = (
+            select count(distinct tg_inner.genre)
+            from titlegenre tg_inner
+            where tg_inner.tconst = testid
+        )
+    )
+    and tb.tconst != testid
+) as t
+where t.rn = 1
+order by t.matching_languages DESC, t.numvotes DESC;
 
 END;
-$$;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 1000
 
 CREATE OR REPLACE FUNCTION person_words(
     p_primaryname VARCHAR,     -- The name of the person we're interested in
@@ -402,5 +443,34 @@ BEGIN
     SELECT wf.word, wf.frequency
     FROM word_frequencies wf
     ORDER BY wf.frequency DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION get_title_principals(_tconst TEXT)
+RETURNS TABLE (
+    tconst VARCHAR,
+    nconst VARCHAR,
+    name VARCHAR,
+    ordering INT,
+    category VARCHAR,
+    job VARCHAR
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT
+        tp.tconst,
+        tp.nconst,
+        nb.primaryName AS name,
+        tp.ordering,
+        tp.category,
+        tp.job
+    FROM 
+        titleprincipals tp
+    JOIN 
+        namebasic nb ON tp.nconst = nb.nconst
+    WHERE 
+        tp.tconst = _tconst
+    ORDER BY 
+        tp.ordering;
 END;
 $$ LANGUAGE plpgsql;
