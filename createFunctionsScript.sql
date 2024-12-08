@@ -446,34 +446,171 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION get_title_principals(_tconst TEXT)
-RETURNS TABLE (
-    tconst VARCHAR,
-    nconst VARCHAR,
-    name VARCHAR,
-    ordering INT,
-    category VARCHAR,
-    job VARCHAR
-) AS $$
+CREATE OR REPLACE FUNCTION "public"."filtered_search_numvotes"("search_term" varchar='null'::character varying, "search_titletype" varchar='null'::character varying, "search_genre" varchar='null'::character varying, "search_year" int4='-1'::integer)
+  RETURNS TABLE("tconst" varchar, "primarytitle" varchar, "startyear" int4, "numvotes" int4, "rating" numeric, "poster" varchar, "genre" varchar) AS $BODY$
 BEGIN
     RETURN QUERY
-    SELECT DISTINCT
+    SELECT 
+        tb.tconst, 
+        tb.primarytitle, 
+        tb.startyear::INTEGER, 
+        COALESCE(tr.numvotes, 0) AS numvotes, 
+        tr.averagerating, 
+        tb.poster, 
+        STRING_AGG(tg.genre, ', ')::varchar AS genre
+    FROM 
+        titlebasic tb
+        LEFT JOIN titleratings tr ON tb.tconst = tr.tconst
+        LEFT JOIN titlegenre tg ON tb.tconst = tg.tconst
+    WHERE 
+        (search_term ='null' OR tb.primarytitle ILIKE '%' || search_term || '%' OR tb.plot ILIKE '%' || search_term || '%')
+        AND (search_titletype ='null' OR tb.titletype = search_titletype)
+        AND (search_year =-1 OR tb.startyear::INTEGER = search_year)
+    GROUP BY tb.tconst, tb.primarytitle, tb.startyear, tb.poster, tr.numvotes, tr.averagerating
+    HAVING
+        (search_genre = 'null' OR STRING_AGG(tg.genre, ', ') ILIKE '%' || search_genre || '%')
+    ORDER BY numvotes DESC NULLS LAST;
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 1000;
+
+CREATE OR REPLACE FUNCTION "public"."filtered_search_avgrating"("search_term" varchar='null'::character varying, "search_titletype" varchar='null'::character varying, "search_genre" varchar='null'::character varying, "search_year" int4='-1'::integer)
+  RETURNS TABLE("tconst" varchar, "primarytitle" varchar, "startyear" int4, "numvotes" int4, "rating" numeric, "poster" varchar, "genre" varchar) AS $BODY$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        tb.tconst, 
+        tb.primarytitle, 
+        tb.startyear::INTEGER, 
+        COALESCE(tr.numvotes, 0) AS numvotes, 
+        tr.averagerating as rating,
+        tb.poster, 
+        STRING_AGG(tg.genre, ', ')::varchar AS genre
+    FROM 
+        titlebasic tb
+        LEFT JOIN titleratings tr ON tb.tconst = tr.tconst
+        LEFT JOIN titlegenre tg ON tb.tconst = tg.tconst
+    WHERE 
+        (search_term = 'null' OR tb.primarytitle ILIKE '%' || search_term || '%' OR tb.plot ILIKE '%' || search_term || '%')
+        AND (search_titletype = 'null' OR tb.titletype = search_titletype)
+        AND (search_year =-1 OR tb.startyear::INTEGER = search_year)
+    GROUP BY tb.tconst, tb.primarytitle, tb.startyear, tb.poster, tr.numvotes, tr.averagerating
+    HAVING
+        (search_genre = 'null' OR STRING_AGG(tg.genre, ', ') ILIKE '%' || search_genre || '%')
+    ORDER BY rating DESC NULLS LAST;
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 1000;
+
+CREATE OR REPLACE FUNCTION "public"."filtered_search_years"("search_term" varchar='null'::character varying, "search_titletype" varchar='null'::character varying, "search_genre" varchar='null'::character varying, "search_year" int4='-1'::integer)
+  RETURNS TABLE("tconst" varchar, "primarytitle" varchar, "startyear" int4, "numvotes" int4, "rating" numeric, "poster" varchar, "genre" varchar) AS $BODY$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        tb.tconst, 
+        tb.primarytitle, 
+        tb.startyear::INTEGER, 
+        COALESCE(tr.numvotes, 0) AS numvotes, 
+        tr.averagerating, 
+        tb.poster, 
+        STRING_AGG(tg.genre, ', ')::varchar AS genre
+    FROM 
+        titlebasic tb
+        LEFT JOIN titleratings tr ON tb.tconst = tr.tconst
+        LEFT JOIN titlegenre tg ON tb.tconst = tg.tconst
+    WHERE 
+        (search_term ='null' OR tb.primarytitle ILIKE '%' || search_term || '%' OR tb.plot ILIKE '%' || search_term || '%')
+        AND (search_titletype ='null' OR tb.titletype = search_titletype)
+        AND (search_year =-1 OR tb.startyear::INTEGER = search_year)
+    GROUP BY tb.tconst, tb.primarytitle, tb.startyear, tb.poster, tr.numvotes, tr.averagerating
+    HAVING
+        (search_genre = 'null' OR STRING_AGG(tg.genre, ', ') ILIKE '%' || search_genre || '%')
+    ORDER BY startyear DESC NULLS LAST;
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 1000;
+
+CREATE OR REPLACE FUNCTION "public"."get_distinct_genres"()
+  RETURNS TABLE("genre" varchar) AS $BODY$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT titlegenre.genre AS genre_alias
+    FROM titlegenre
+    ORDER BY titlegenre.genre;
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 1000;
+
+CREATE OR REPLACE FUNCTION "public"."get_distinct_title_types"()
+  RETURNS TABLE("titletype" varchar) AS $BODY$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT tb.titletype
+    FROM titlebasic tb
+    ORDER BY tb.titletype;
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 1000;
+
+CREATE OR REPLACE FUNCTION "public"."get_distinct_start_years"()
+  RETURNS TABLE("startyear" int4) AS $BODY$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT tb.startyear::INTEGER
+    FROM titlebasic tb
+    WHERE tb.startyear IS NOT NULL
+    ORDER BY tb.startyear::INTEGER DESC;
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 1000;
+
+CREATE OR REPLACE FUNCTION "public"."get_title_principals_name"("_nconst" text)
+  RETURNS TABLE("tconst" varchar, "nconst" varchar, "ordering" int4, "name" varchar, "title" varchar, "release_year" int4, "roles" text, "poster" varchar) AS $BODY$
+BEGIN
+    RETURN QUERY
+    SELECT
         tp.tconst,
         tp.nconst,
+                MIN(tp.ordering) AS ordering,
         nb.primaryName AS name,
-        tp.ordering,
-        tp.category,
-        tp.job
+        tb.primaryTitle AS title,
+        tb.startYear::int4 AS release_year,
+        STRING_AGG(
+            DISTINCT INITCAP(REPLACE(tp.category, '_', ' ')),
+            ', '
+        ) AS roles,
+        tb.poster
     FROM 
         titleprincipals tp
     JOIN 
-        namebasic nb ON tp.nconst = nb.nconst
+        titlebasic tb ON tp.tconst = tb.tconst
+    JOIN
+        namebasic nb ON tp.nconst = nb.nconst -- Join with namebasic to get the name
     WHERE 
-        tp.tconst = _tconst
-    ORDER BY 
-        tp.ordering;
+        tp.nconst = _nconst
+    GROUP BY
+        tp.tconst, tp.nconst, nb.primaryName, tb.primaryTitle, tb.startYear, tb.poster
+    ORDER BY
+        tb.startYear DESC, 
+        MIN(tp.ordering),
+        tb.primaryTitle;   -- Then alphabetically by title
 END;
-$$ LANGUAGE plpgsql;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 1000;
 
 CREATE OR REPLACE FUNCTION "public"."top10actors"()
   RETURNS TABLE("nconst" varchar, "primaryname" varchar, "total_numvotes" int4) AS $BODY$
