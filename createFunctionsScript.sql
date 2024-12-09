@@ -1,3 +1,15 @@
+CREATE MATERIALIZED VIEW popularity_view AS
+SELECT
+    tp.nconst,
+    SUM(tr.numVotes) AS popularity
+FROM
+    titlePrincipals tp
+    JOIN titleRatings tr ON tp.tconst = tr.tconst
+WHERE
+    tp.category IN ('actor', 'actress')
+GROUP BY
+    tp.nconst;
+
 CREATE OR REPLACE FUNCTION "public"."add_user"("p_username" varchar, "p_email" varchar)
   RETURNS "pg_catalog"."void" AS $BODY$
 BEGIN
@@ -167,7 +179,8 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-  
+
+
   create or replace PROCEDURE rate(titleId VARCHAR(10), _rating int4, _userId int4)
 LANGUAGE plpgsql as $$
 declare oldRating int;
@@ -215,6 +228,33 @@ BEGIN
       AND tb.plot ILIKE '%' || p_plot || '%'
       AND tp.character ILIKE '%' || p_characters || '%'
       AND nb.primaryname ILIKE '%' || p_names || '%';
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 1000;
+
+CREATE OR REPLACE FUNCTION "public"."search_names_by_text_sorted"("search_text" varchar, "sorttype" varchar)
+  RETURNS TABLE("nconst" varchar, "primaryname" varchar, "birthyear" bpchar, "deathyear" bpchar, "nrating" numeric) AS $BODY$
+BEGIN
+    RETURN QUERY EXECUTE
+        'SELECT
+            nb.nconst,
+            nb.primaryName,
+            nb.birthYear,
+            nb.deathYear,
+            nb.nrating
+         FROM
+            nameBasic nb
+         LEFT JOIN popularity_view pop ON nb.nconst = pop.nconst
+         WHERE
+            nb.primaryName ILIKE ''%' || search_text || '%''
+         ORDER BY ' || CASE 
+                        WHEN sortType = 'popularity' THEN 'pop.popularity DESC NULLS LAST'
+                        WHEN sortType = 'rating' THEN 'nb.nrating DESC NULLS LAST'
+                        WHEN sortType = 'year' THEN 'nb.birthYear'
+                        ELSE 'nb.primaryName'
+                        END || ';';
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
@@ -613,19 +653,25 @@ $BODY$
   ROWS 1000;
 
 CREATE OR REPLACE FUNCTION "public"."top10actors"()
-  RETURNS TABLE("nconst" varchar, "primaryname" varchar, "total_numvotes" int4) AS $BODY$
+  RETURNS TABLE("nconst" text, "primaryname" text, "total_numvotes" int4) AS $BODY$
 BEGIN
-
-return query
-select nb.nconst, nb.primaryname, sum(tr.numvotes)::int4 as total_numvotes
-from namebasic nb
-join titleprincipals tp on nb.nconst = tp.nconst
-join titleratings tr on tp.tconst = tr.tconst
-where tp.category IN ('actor', 'actress')
-group by nb.nconst, nb.primaryname
-order by total_numvotes DESC
-limit 10;
-
+    RETURN QUERY
+    SELECT
+        nb.nconst::TEXT,
+        nb.primaryName::TEXT,
+        pop.popularity::INT AS total_numvotes
+    FROM
+        nameBasic nb
+    JOIN popularity_view pop ON nb.nconst = pop.nconst
+    WHERE
+        nb.nconst IN (
+            SELECT tp.nconst
+            FROM titlePrincipals tp
+            WHERE tp.category IN ('actor', 'actress')
+        )
+    ORDER BY
+        pop.popularity DESC
+    LIMIT 10;
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
