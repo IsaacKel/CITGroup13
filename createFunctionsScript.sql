@@ -182,6 +182,17 @@ $BODY$
 
   ALTER TABLE usersearchHistory ADD COLUMN searchid int; 
 
+  ALTER TABLE users
+ADD COLUMN salt VARCHAR(100),
+ADD COLUMN name VARCHAR(50),
+ADD COLUMN role VARCHAR(50);
+
+ALTER TABLE userRatings
+ALTER COLUMN rating TYPE integer USING rating::integer; 
+
+
+
+
   create or replace PROCEDURE rate(titleId VARCHAR(10), _rating int4, _userId int4)
 LANGUAGE plpgsql as $$
 declare oldRating int;
