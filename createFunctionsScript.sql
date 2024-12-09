@@ -180,6 +180,7 @@ $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
 
+  ALTER TABLE usersearchHistory ADD COLUMN searchid int; 
 
   create or replace PROCEDURE rate(titleId VARCHAR(10), _rating int4, _userId int4)
 LANGUAGE plpgsql as $$
